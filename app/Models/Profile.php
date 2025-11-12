@@ -11,24 +11,21 @@ class Profile extends Model
 
     protected $fillable = [
         'user_id',
+        'type',
+        'bio',
+        'avatar_url',
         'phone',
         'location',
-        'bio',
-        'avatar',
-        'social_platforms',
-        'niches',
-        'content_types',
-        'collaboration_types',
-        'pricing',
-        'portfolio_url',
+        'niche',
+        'dna_vector',
+        'metrics',
+        'followers',
+        'engagement_rate',
     ];
 
     protected $casts = [
-        'social_platforms' => 'array',
-        'niches' => 'array',
-        'content_types' => 'array',
-        'collaboration_types' => 'array',
-        'pricing' => 'decimal:2',
+        'dna_vector' => 'array',
+        'metrics' => 'array',
     ];
 
     public function user()
