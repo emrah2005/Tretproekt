@@ -27,7 +27,6 @@ return [
     ],
 
     'providers' => ServiceProvider::defaultProviders()->merge([
-        MongoDB\Laravel\MongoDBServiceProvider::class,
         App\Providers\AppServiceProvider::class,
         App\Providers\AuthServiceProvider::class,
         App\Providers\EventServiceProvider::class,
