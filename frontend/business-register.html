@@ -168,18 +168,17 @@
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
+body: JSON.stringify({
             name: companyName,
             email: email,
             password: password,
-            user_type: 'brand',
-            company_name: companyName,
+            userType: 'brand',
+            companyName: companyName,
             industry: industry,
-            bio: companyBio,
-            website: website,
-            location: location
-          })
-        });
-
+            aboutCompany: companyBio,
+            location: location,
+            acceptTerms: termsAccepted
+        
         const data = await response.json();
 
         if (response.ok) {
