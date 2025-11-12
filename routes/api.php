@@ -8,6 +8,12 @@ use App\Http\Controllers\MessageController;
 use App\Http\Controllers\PaymentController;
 use Illuminate\Support\Facades\Route;
 
+
+// Test endpoint to verify routing
+Route::get('/test', function () {
+    return response()->json(['message' => 'API routing is working!', 'status' => 'success']);
+});
+
 // Public routes
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
