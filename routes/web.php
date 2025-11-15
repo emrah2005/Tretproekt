@@ -1,36 +1,26 @@
 <?php
 
-use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 
-// Home page
+/*
+|--------------------------------------------------------------------------
+| Web Routes
+|--------------------------------------------------------------------------
+|
+| Here is where you can register web routes for your application. These
+| routes are loaded by the RouteServiceProvider and all of them will
+| be assigned to the "web" middleware group. Make something great!
+|
+*/
+
+// Simple welcome endpoint
 Route::get('/', function () {
-    return view('welcome');
-})->name('home');
-
-// Dashboard - requires authentication and email verification
-Route::get('/dashboard', function () {
-    return view('dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
-
-// Authenticated routes
-Route::middleware('auth')->group(function () {
-    // Profile routes
-    Route::get('/profile', [ProfileController::class, 'edit'])
-        ->name('profile.edit');
-    Route::patch('/profile', [ProfileController::class, 'update'])
-        ->name('profile.update');
-    Route::delete('/profile', [ProfileController::class, 'destroy'])
-        ->name('profile.destroy');
-    
-    // Logout route
-    Route::post('/logout', function () {
-        auth()->logout();
-        session()->invalidate();
-        session()->regenerateToken();
-        return redirect('/');
-    })->name('logout');
+    return response()->json([
+        'message' => 'Influenita API - Welcome',
+        'version' => '1.0.0',
+        'documentation' => 'See /api/documentation or check the API_COMPLETE_SETUP.md file',
+    ]);
 });
 
-// Auth routes (login, register, password reset, email verification)
+// Authentication routes
 require __DIR__.'/auth.php';
