@@ -32,112 +32,112 @@ pool.getConnection().then(conn => {
 });
 
 // =============================================
-// INFLUENCER REGISTRATION
+// BUSINESS REGISTRATION
 // =============================================
 app.post('/api/register', async (req, res) => {
   try {
-    const { name, email, password, bio, niche, platforms, followers, location, instagram } = req.body;
+    const { 
+      email, 
+      password, 
+      companyName, 
+      industry, 
+      companyBio, 
+      website, 
+      location,
+      acceptTerms
+    } = req.body;
 
-    if (!name || !email || !password) {
-      return res.status(400).json({ error: 'Name, email, and password are required' });
+    // Validation
+    if (!email || !password || !companyName) {
+      return res.status(400).json({ 
+        error: 'Email, password, and company name are required' 
+      });
+    }
+
+    if (!acceptTerms) {
+      return res.status(400).json({ 
+        error: 'You must accept the terms and conditions' 
+      });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const conn = await pool.getConnection();
-
+    
     try {
-      const query = 'INSERT INTO users (name, email, password, bio, niche, platforms, followers, location, instagram, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())';
+      // Insert into users table
+      const userQuery = `
+        INSERT INTO users (name, email, password, created_at, updated_at) 
+        VALUES (?, ?, ?, NOW(), NOW())
+      `;
       
-      await conn.query(query, [
-        name,
+      const [userResult] = await conn.query(userQuery, [
+        companyName,
         email,
-        hashedPassword,
-        bio || null,
-        niche || null,
-        JSON.stringify(platforms) || null,
-        followers || null,
+        hashedPassword
+      ]);
+      
+      const userId = userResult.insertId;
+
+      // Create or use businesses table
+      const businessQuery = `
+        INSERT INTO businesses (user_id, company_name, email, industry, description, website, location, accepts_terms, created_at, updated_at) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+      `;
+      
+      await conn.query(businessQuery, [
+        userId,
+        companyName,
+        email,
+        industry || null,
+        companyBio || null,
+        website || null,
         location || null,
-        instagram || null
+        acceptTerms ? 1 : 0
       ]);
 
-      const token = jwt.sign({ email, type: 'influencer' }, process.env.JWT_SECRET || 'secret', { expiresIn: '24h' });
+      const token = jwt.sign(
+        { id: userId, email, type: 'business', name: companyName },
+        process.env.JWT_SECRET || 'secret',
+        { expiresIn: '24h' }
+      );
 
       res.status(201).json({
-        message: 'Influencer registered successfully',
+        message: 'Business registered successfully',
         token,
-        user: { name, email, type: 'influencer' }
+        user: { id: userId, email, type: 'business', name: companyName }
       });
+
     } finally {
       conn.release();
     }
   } catch (error) {
     console.error('Registration error:', error);
-    res.status(500).json({ error: error.message });
+    // Check if it's a duplicate email error
+    if (error.code === 'ER_DUP_ENTRY') {
+      res.status(400).json({ error: 'Email already registered' });
+    } else {
+      res.status(500).json({ error: error.message });
+    }
   }
 });
 
 // =============================================
-// BRAND REGISTRATION
-// =============================================
-app.post('/api/brand-register', async (req, res) => {
-  try {
-    const { company_name, email, password, contact_person, phone, industry, website, headquarters, employees, description } = req.body;
-
-    if (!company_name || !email || !password || !contact_person || !phone) {
-      return res.status(400).json({ error: 'Missing required fields' });
-    }
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const conn = await pool.getConnection();
-
-    try {
-      const query = 'INSERT INTO brands (company_name, email, password, contact_person, phone, industry, website, headquarters, employees, description, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())';
-      
-      const result = await conn.query(query, [
-        company_name,
-        email,
-        hashedPassword,
-        contact_person,
-        phone,
-        industry || null,
-        website || null,
-        headquarters || null,
-        employees || null,
-        description || null
-      ]);
-
-      const token = jwt.sign({ email, type: 'brand' }, process.env.JWT_SECRET || 'secret', { expiresIn: '24h' });
-
-      res.status(201).json({
-        message: 'Brand registered successfully',
-        token,
-        user: { company_name, email, type: 'brand' }
-      });
-    } finally {
-      conn.release();
-    }
-  } catch (error) {
-    console.error('Brand registration error:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// =============================================
-// LOGIN ENDPOINT (Influencers & Brands)
+// LOGIN ENDPOINT
 // =============================================
 app.post('/api/login', async (req, res) => {
   try {
     const { email, password, type } = req.body;
 
     if (!email || !password || !type) {
-      return res.status(400).json({ error: 'Email, password, and type are required' });
+      return res.status(400).json({ 
+        error: 'Email, password, and type are required' 
+      });
     }
 
-    const table = type === 'brand' ? 'brands' : 'users';
     const conn = await pool.getConnection();
-
+    
     try {
-      const query = `SELECT * FROM ${table} WHERE email = ?`;
+      const query = `SELECT * FROM users WHERE email = ?`;
       const [results] = await conn.query(query, [email]);
 
       if (results.length === 0) {
@@ -156,7 +156,7 @@ app.post('/api/login', async (req, res) => {
           id: user.id,
           email: user.email,
           type,
-          name: type === 'brand' ? user.company_name : user.name
+          name: user.name
         },
         process.env.JWT_SECRET || 'secret',
         { expiresIn: '24h' }
@@ -168,7 +168,7 @@ app.post('/api/login', async (req, res) => {
         user: {
           id: user.id,
           email: user.email,
-          name: type === 'brand' ? user.company_name : user.name,
+          name: user.name,
           type
         }
       });
