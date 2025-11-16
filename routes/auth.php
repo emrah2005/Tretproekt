@@ -11,6 +11,17 @@ use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 use Illuminate\Support\Facades\Route;
 
+/*
+|--------------------------------------------------------------------------
+| Authentication Routes
+|--------------------------------------------------------------------------
+|
+| Here you can define authentication-related routes for your web application.
+| These routes are loaded by the RouteServiceProvider and will be assigned
+| to the "web" middleware group.
+|
+*/
+
 // Guest routes - only for unauthenticated users
 Route::middleware('guest')->group(function () {
     // Registration routes
@@ -28,6 +39,7 @@ Route::middleware('guest')->group(function () {
         ->name('password.request');
     Route::post('forgot-password', [PasswordResetLinkController::class, 'store'])
         ->name('password.email');
+
     Route::get('reset-password/{token}', [NewPasswordController::class, 'create'])
         ->name('password.reset');
     Route::post('reset-password', [NewPasswordController::class, 'store'])
@@ -39,9 +51,11 @@ Route::middleware('auth')->group(function () {
     // Email verification routes
     Route::get('verify-email', EmailVerificationPromptController::class)
         ->name('verification.notice');
+
     Route::get('verify-email/{id}/{hash}', VerifyEmailController::class)
         ->middleware(['signed', 'throttle:6,1'])
         ->name('verification.verify');
+
     Route::post('email/verification-notification', [EmailVerificationNotificationController::class, 'store'])
         ->middleware('throttle:6,1')
         ->name('verification.send');
