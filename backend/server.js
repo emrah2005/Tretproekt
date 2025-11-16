@@ -182,6 +182,96 @@ app.post('/api/login', async (req, res) => {
 });
 
 // =============================================
+// INFLUENCER REGISTRATION
+// =============================================
+app.post('/api/influencer/register', async (req, res) => {
+  try {
+    const { 
+      email, 
+      password, 
+      name,
+      bio, 
+      niche, 
+      platforms, 
+      followers, 
+      location,
+      instagram_handle,
+      termsAccepted
+    } = req.body;
+
+    // Validation
+    if (!email || !password || !name) {
+      return res.status(400).json({ 
+        error: 'Email, password, and name are required' 
+      });
+    }
+    
+    if (!termsAccepted) {
+      return res.status(400).json({ 
+        error: 'You must accept the terms and conditions' 
+      });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const conn = await pool.getConnection();
+    
+    try {
+      // Insert into users table
+      const userQuery = `
+        INSERT INTO users (name, email, password, created_at, updated_at) 
+        VALUES (?, ?, ?, NOW(), NOW())
+      `;
+      
+      const [userResult] = await conn.query(userQuery, [
+        name,
+        email,
+        hashedPassword
+      ]);
+      
+      const userId = userResult.insertId;
+      
+      // Insert into influencers table
+      const influencerQuery = `
+        INSERT INTO influencers (user_id, bio, niche, platforms, followers, location, instagram_handle, accepts_terms, created_at, updated_at) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+      `;
+      
+      await conn.query(influencerQuery, [
+        userId,
+        bio || null,
+        niche || null,
+        platforms || null,
+        followers || 0,
+        location || null,
+        instagram_handle || null,
+        termsAccepted ? 1 : 0
+      ]);
+      
+      const token = jwt.sign(
+        { id: userId, email, type: 'influencer', name },
+        process.env.JWT_SECRET || 'secret',
+        { expiresIn: '24h' }
+      );
+      
+      res.status(201).json({
+        message: 'Influencer registered successfully',
+        token,
+        user: { id: userId, email, type: 'influencer', name }
+      });
+    } finally {
+      conn.release();
+    }
+  } catch (error) {
+    console.error('Influencer registration error:', error);
+    if (error.code === 'ER_DUP_ENTRY') {
+      res.status(400).json({ error: 'Email already registered' });
+    } else {
+      res.status(500).json({ error: error.message });
+    }
+  }
+});
+
+// =============================================
 // TEST ENDPOINT
 // =============================================
 app.get('/api/test', (req, res) => {
