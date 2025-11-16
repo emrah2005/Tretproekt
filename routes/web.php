@@ -13,14 +13,18 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-// Simple welcome endpoint
+// Default welcome endpoint
 Route::get('/', function () {
     return response()->json([
-        'message' => 'Influenita API - Welcome',
+        'message' => 'Tretproekt API - Welcome',
         'version' => '1.0.0',
-        'documentation' => 'See /api/documentation or check the API_COMPLETE_SETUP.md file',
+        'endpoints' => [
+            'api' => '/api/v1',
+            'documentation' => '/api/documentation',
+            'health' => '/api/health'
+        ]
     ]);
-});
+})->name('home');
 
-// Authentication routes
+// Load authentication routes
 require __DIR__.'/auth.php';
