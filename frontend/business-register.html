@@ -91,7 +91,8 @@
         <!-- Terms & Conditions -->
         <div class="flex items-center gap-3">
           <input id="termsAccepted" type="checkbox" required class="w-5 h-5 text-purple-600 rounded">
-          <label for="termsAccepted" class="text-sm text-gray-700">I agree to the Terms & Conditions *</label>
+          <label for="termsAccepted" class="text-sm text-gray-700">170
+              the Terms & Conditions *</label>
         </div>
         <span class="text-red-500 text-sm" id="termsError"></span>
 
@@ -167,7 +168,6 @@
         const response = await fetch(API_BASE_URL + '/register', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
 body: JSON.stringify({
             name: companyName,
             email: email,
@@ -178,6 +178,8 @@ body: JSON.stringify({
             aboutCompany: companyBio,
             location: location,
             acceptTerms: termsAccepted
+                 website: website
+                 })
         
         const data = await response.json();
 
