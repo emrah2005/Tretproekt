@@ -8,31 +8,49 @@ use App\Http\Controllers\MessageController;
 use App\Http\Controllers\PaymentController;
 use Illuminate\Support\Facades\Route;
 
-// Test endpoint to verify routing
-Route::get('/test', function () {
-    return response()->json(['message' => 'API routing is working!', 'status' => 'success']);
+/*
+|--------------------------------------------------------------------------
+| API Routes
+|--------------------------------------------------------------------------
+|
+| Here is where you can register API routes for your application. These
+| routes are loaded by the RouteServiceProvider and all of them will
+| be assigned to the "api" middleware group. Make something great!
+|
+*/
+
+// Health check endpoint
+Route::get('/health', function () {
+    return response()->json([
+        'status' => 'OK',
+        'message' => 'API is running',
+        'timestamp' => now()
+    ]);
 });
 
-// Public routes - Authentication
-Route::post('/register', [AuthController::class, 'register']);
-Route::post('/login', [AuthController::class, 'login']);
+// Public API routes - No authentication required
+Route::prefix('v1')->group(function () {
+    // Authentication endpoints
+    Route::post('/auth/register', [AuthController::class, 'register']);
+    Route::post('/auth/login', [AuthController::class, 'login']);
+});
 
-// Protected routes - Authenticated users only
-Route::middleware('auth:sanctum')->group(function () {
-    // Auth routes
-    Route::post('/logout', [AuthController::class, 'logout']);
+// Protected API routes - Authentication required (Sanctum)
+Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
+    // Authentication
+    Route::post('/auth/logout', [AuthController::class, 'logout']);
     
-    // Profile routes
+    // Profile management
     Route::get('/profile', [ProfileController::class, 'show']);
     Route::put('/profile', [ProfileController::class, 'update']);
     Route::delete('/profile', [ProfileController::class, 'destroy']);
     
-    // Campaigns resource
+    // Campaigns (REST resource)
     Route::apiResource('campaigns', CampaignController::class);
     
     // Applications
-    Route::post('/applications', [ApplicationController::class, 'store']);
     Route::get('/applications', [ApplicationController::class, 'index']);
+    Route::post('/applications', [ApplicationController::class, 'store']);
     Route::get('/applications/{id}', [ApplicationController::class, 'show']);
     Route::put('/applications/{id}', [ApplicationController::class, 'update']);
     Route::delete('/applications/{id}', [ApplicationController::class, 'destroy']);
