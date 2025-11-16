@@ -23,185 +23,176 @@ const pool = mysql.createPool({
   queueLimit: 0
 });
 
-// JWT Secret
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
-const PORT = process.env.PORT || 5000;
-
-// Serve index.html for root route
-app.get('/', (req, res) => {
-  res.sendFile(require('path').join(__dirname, '../frontend/index.html'));
+// Test database connection
+pool.getConnection().then(conn => {
+  console.log('MySQL connected successfully');
+  conn.release();
+}).catch(err => {
+  console.error('MySQL connection error:', err);
 });
 
-// Health check
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'Backend is running' });
-});
-
-// Register endpoint - MySQL version
+// =============================================
+// INFLUENCER REGISTRATION
+// =============================================
 app.post('/api/register', async (req, res) => {
-  let connection;
   try {
-    const { name, email, password, user_type, bio, niche, platforms, followers, location, instagram_handle } = req.body;
-    
-    // Validation
+    const { name, email, password, bio, niche, platforms, followers, location, instagram } = req.body;
+
     if (!name || !email || !password) {
-      return res.status(400).json({ message: 'Name, email, and password are required' });
+      return res.status(400).json({ error: 'Name, email, and password are required' });
     }
-    
-    if (password.length < 8) {
-      return res.status(400).json({ message: 'Password must be at least 8 characters' });
-    }
-    
-    connection = await pool.getConnection();
-    
-    // Check if user already exists
-    const [existingUser] = await connection.query('SELECT * FROM users WHERE email = ?', [email]);
-    if (existingUser.length > 0) {
-      connection.release();
-      return res.status(400).json({ message: 'Email already registered' });
-    }
-    
-    // Hash password
+
     const hashedPassword = await bcrypt.hash(password, 10);
-    
-    // Insert user into database
-    const [result] = await connection.query(
-      'INSERT INTO users (name, email, password, created_at, updated_at) VALUES (?, ?, ?, NOW(), NOW())',
-      [name, hashedPassword, email]
-    );
-    
-    const userId = result.insertId;
-    console.log(`New user registered: ${email} (ID: ${userId})`);
-    
-    // Generate JWT token
-    const token = jwt.sign({ userId: userId, email: email }, JWT_SECRET, { expiresIn: '7d' });
-    
-    connection.release();
-    
-    // Return success response
-    res.status(201).json({
-      token,
-      user: {
-        id: userId,
-        name: name,
-        email: email,
-        user_type: user_type || 'influencer'
-      },
-      message: 'Account created successfully'
-    });
+    const conn = await pool.getConnection();
+
+    try {
+      const query = 'INSERT INTO users (name, email, password, bio, niche, platforms, followers, location, instagram, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())';
+      
+      await conn.query(query, [
+        name,
+        email,
+        hashedPassword,
+        bio || null,
+        niche || null,
+        JSON.stringify(platforms) || null,
+        followers || null,
+        location || null,
+        instagram || null
+      ]);
+
+      const token = jwt.sign({ email, type: 'influencer' }, process.env.JWT_SECRET || 'secret', { expiresIn: '24h' });
+
+      res.status(201).json({
+        message: 'Influencer registered successfully',
+        token,
+        user: { name, email, type: 'influencer' }
+      });
+    } finally {
+      conn.release();
+    }
   } catch (error) {
-    if (connection) connection.release();
     console.error('Registration error:', error);
-    res.status(500).json({ message: 'Server error during registration: ' + error.message });
+    res.status(500).json({ error: error.message });
   }
 });
 
-// Login endpoint
+// =============================================
+// BRAND REGISTRATION
+// =============================================
+app.post('/api/brand-register', async (req, res) => {
+  try {
+    const { company_name, email, password, contact_person, phone, industry, website, headquarters, employees, description } = req.body;
+
+    if (!company_name || !email || !password || !contact_person || !phone) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const conn = await pool.getConnection();
+
+    try {
+      const query = 'INSERT INTO brands (company_name, email, password, contact_person, phone, industry, website, headquarters, employees, description, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())';
+      
+      const result = await conn.query(query, [
+        company_name,
+        email,
+        hashedPassword,
+        contact_person,
+        phone,
+        industry || null,
+        website || null,
+        headquarters || null,
+        employees || null,
+        description || null
+      ]);
+
+      const token = jwt.sign({ email, type: 'brand' }, process.env.JWT_SECRET || 'secret', { expiresIn: '24h' });
+
+      res.status(201).json({
+        message: 'Brand registered successfully',
+        token,
+        user: { company_name, email, type: 'brand' }
+      });
+    } finally {
+      conn.release();
+    }
+  } catch (error) {
+    console.error('Brand registration error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// =============================================
+// LOGIN ENDPOINT (Influencers & Brands)
+// =============================================
 app.post('/api/login', async (req, res) => {
-  let connection;
   try {
-    const { email, password } = req.body;
-    
-    if (!email || !password) {
-      return res.status(400).json({ message: 'Email and password are required' });
+    const { email, password, type } = req.body;
+
+    if (!email || !password || !type) {
+      return res.status(400).json({ error: 'Email, password, and type are required' });
     }
-    
-    connection = await pool.getConnection();
-    
-    // Find user
-    const [users] = await connection.query('SELECT * FROM users WHERE email = ?', [email]);
-    
-    if (users.length === 0) {
-      connection.release();
-      return res.status(401).json({ message: 'Invalid email or password' });
+
+    const table = type === 'brand' ? 'brands' : 'users';
+    const conn = await pool.getConnection();
+
+    try {
+      const query = `SELECT * FROM ${table} WHERE email = ?`;
+      const [results] = await conn.query(query, [email]);
+
+      if (results.length === 0) {
+        return res.status(401).json({ error: 'Invalid email or password' });
+      }
+
+      const user = results[0];
+      const isPasswordValid = await bcrypt.compare(password, user.password);
+
+      if (!isPasswordValid) {
+        return res.status(401).json({ error: 'Invalid email or password' });
+      }
+
+      const token = jwt.sign(
+        {
+          id: user.id,
+          email: user.email,
+          type,
+          name: type === 'brand' ? user.company_name : user.name
+        },
+        process.env.JWT_SECRET || 'secret',
+        { expiresIn: '24h' }
+      );
+
+      res.status(200).json({
+        message: 'Login successful',
+        token,
+        user: {
+          id: user.id,
+          email: user.email,
+          name: type === 'brand' ? user.company_name : user.name,
+          type
+        }
+      });
+    } finally {
+      conn.release();
     }
-    
-    const user = users[0];
-    
-    // Verify password
-    const passwordMatch = await bcrypt.compare(password, user.password);
-    
-    if (!passwordMatch) {
-      connection.release();
-      return res.status(401).json({ message: 'Invalid email or password' });
-    }
-    
-    // Generate JWT token
-    const token = jwt.sign({ userId: user.id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
-    
-    connection.release();
-    
-    res.json({
-      token,
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email
-      },
-      message: 'Login successful'
-    });
   } catch (error) {
-    if (connection) connection.release();
     console.error('Login error:', error);
-    res.status(500).json({ message: 'Server error during login' });
+    res.status(500).json({ error: error.message });
   }
 });
 
-// Get user profile
-app.get('/api/profile', async (req, res) => {
-  let connection;
-  try {
-    const token = req.headers.authorization?.split(' ')[1];
-    if (!token) {
-      return res.status(401).json({ message: 'No token provided' });
-    }
-    
-    const decoded = jwt.verify(token, JWT_SECRET);
-    connection = await pool.getConnection();
-    
-    const [users] = await connection.query('SELECT id, name, email FROM users WHERE id = ?', [decoded.userId]);
-    connection.release();
-    
-    if (users.length === 0) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-    
-    res.json({
-      user: users[0],
-      campaigns: [],
-      applications: [],
-      rating: 4.5
-    });
-  } catch (error) {
-    if (connection) connection.release();
-    res.status(401).json({ message: 'Invalid token' });
-  }
+// =============================================
+// TEST ENDPOINT
+// =============================================
+app.get('/api/test', (req, res) => {
+  res.json({ message: 'API is working', timestamp: new Date() });
 });
 
-// Get campaigns
-app.get('/api/campaigns', (req, res) => {
-  res.json([]);
-});
-
-// Get applications
-app.get('/api/applications', (req, res) => {
-  res.json([]);
-});
-
-// Get conversations
-app.get('/api/conversations', (req, res) => {
-  res.json([]);
-});
-
-// Send message
-app.post('/api/messages', (req, res) => {
-  res.json({ message: 'Message sent' });
-});
-
-// Start server
+// =============================================
+// START SERVER
+// =============================================
+const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log(`\n✅ Backend running on http://localhost:${PORT}`);
-  console.log(`📝 API Health Check: http://localhost:${PORT}/api/health`);
-  console.log(`🗄️  Database: tretproekt (MySQL)`);
-  console.log(`🚀 Frontend: http://localhost:${PORT}\n`);
+  console.log(`Server running on http://localhost:${PORT}`);
+  console.log(`API: http://localhost:${PORT}/api/test`);
 });
