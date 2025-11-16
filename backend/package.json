@@ -1,7 +1,7 @@
 {
   "name": "tretproekt-backend",
   "version": "1.0.0",
-  "description": "Tretproekt Backend API",
+  "description": "Tretproekt Backend API with MySQL",
   "main": "server.js",
   "scripts": {
     "dev": "node server.js",
@@ -12,6 +12,7 @@
     "cors": "^2.8.5",
     "dotenv": "^16.0.3",
     "bcrypt": "^5.1.0",
-    "jsonwebtoken": "^9.0.0"
+    "jsonwebtoken": "^9.0.0",
+    "mysql2": "^3.6.0"
   }
 }
