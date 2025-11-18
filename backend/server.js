@@ -54,13 +54,6 @@ app.post('/api/register', async (req, res) => {
       instagramHandle
     } = req.body;
           
-    // Field name normalization for backwards compatibility
-    if (!fullName && req.body.name) fullName = req.body.name;
-    if (!mainNiche && req.body.niche) mainNiche = req.body.niche;
-    if (!activePlatforms && req.body.platforms) activePlatforms = req.body.platforms;
-    if (!followersCount && req.body.followers) followersCount = req.body.followers;
-    if (!instagramHandle && req.body.instagram_handle) instagramHandle = req.body.instagram_handle;
-
     // Basic validation
     if (!email || !password) {
       return res.status(400).json({
