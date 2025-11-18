@@ -183,16 +183,17 @@
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            name: fullName,
+            fullName: fullName,
             email: email,
             password: password,
             user_type: 'influencer',
+                          acceptTerms: termsAccepted,
             bio: bio,
-            niche: mainNiche,
-            platforms: platforms,
-            followers: parseInt(followers),
+            mainNiche: mainNiche,
+            activePlatforms: platforms,
+            followersCount: parseInt(followers),
             location: location,
-            instagram_handle: instagramHandle
+            instagramHandle: instagramHandle
           })
         });
 
