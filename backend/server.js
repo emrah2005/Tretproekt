@@ -32,26 +32,32 @@ pool.getConnection().then(conn => {
 });
 
 // ================================================
-// BUSINESS REGISTRATION
+// UNIFIED REGISTRATION ENDPOINT (BUSINESS + INFLUENCER)
 // ================================================
 app.post('/api/register', async (req, res) => {
   try {
     const {
       email,
       password,
+      user_type,
       companyName,
       industry,
       companyBio,
       website,
       location,
       acceptTerms,
-      user_type
+      fullName,
+      bio,
+      mainNiche,
+      activePlatforms,
+      followersCount,
+      instagramHandle
     } = req.body;
 
-    // Validation
-    if (!email || !password || !companyName) {
+    // Basic validation
+    if (!email || !password) {
       return res.status(400).json({
-        error: 'Email, password, and company name are required'
+        error: 'Email and password are required'
       });
     }
 
@@ -64,6 +70,33 @@ app.post('/api/register', async (req, res) => {
     if (!acceptTerms) {
       return res.status(400).json({
         error: 'You must accept the terms and conditions'
+      });
+    }
+
+    // Route based on user_type
+    if (user_type === 'influencer') {
+      return await registerInfluencer(email, password, fullName, bio, mainNiche, activePlatforms, followersCount, location, instagramHandle, acceptTerms, res);
+    } else {
+      return await registerBusiness(email, password, companyName, industry, companyBio, website, location, acceptTerms, res);
+    }
+
+  } catch (error) {
+    console.error('Registration error:', error);
+    res.status(500).json({
+      message: 'Registration error',
+      error: error.message
+    });
+  }
+});
+
+// ================================================
+// BUSINESS REGISTRATION HANDLER
+// ================================================
+async function registerBusiness(email, password, companyName, industry, companyBio, website, location, acceptTerms, res) {
+  try {
+    if (!companyName) {
+      return res.status(400).json({
+        error: 'Company name is required'
       });
     }
 
@@ -127,40 +160,20 @@ app.post('/api/register', async (req, res) => {
   } catch (error) {
     console.error('Business registration error:', error);
     res.status(500).json({
-      message: 'Registration error',
+      message: 'Business registration error',
       error: error.message
     });
   }
-});
+}
 
 // ================================================
-// INFLUENCER REGISTRATION
+// INFLUENCER REGISTRATION HANDLER
 // ================================================
-app.post('/api/influencer/register', async (req, res) => {
+async function registerInfluencer(email, password, fullName, bio, mainNiche, activePlatforms, followersCount, location, instagramHandle, acceptTerms, res) {
   try {
-    const {
-      email,
-      password,
-      fullName,
-      bio,
-      mainNiche,
-      activePlatforms,
-      followersCount,
-      location,
-      instagramHandle,
-      acceptTerms
-    } = req.body;
-
-    // Validation
-    if (!email || !password || !fullName) {
+    if (!fullName) {
       return res.status(400).json({
-        error: 'Email, password, and full name are required'
-      });
-    }
-
-    if (!acceptTerms) {
-      return res.status(400).json({
-        error: 'You must accept the terms and conditions'
+        error: 'Full name is required'
       });
     }
 
@@ -226,11 +239,11 @@ app.post('/api/influencer/register', async (req, res) => {
   } catch (error) {
     console.error('Influencer registration error:', error);
     res.status(500).json({
-      message: 'Registration error',
+      message: 'Influencer registration error',
       error: error.message
     });
   }
-});
+}
 
 // ================================================
 // HEALTH CHECK
