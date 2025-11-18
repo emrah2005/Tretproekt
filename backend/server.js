@@ -31,42 +31,49 @@ pool.getConnection().then(conn => {
   console.error('MySQL connection error:', err);
 });
 
-// =============================================
+// ================================================
 // BUSINESS REGISTRATION
-// =============================================
+// ================================================
 app.post('/api/register', async (req, res) => {
   try {
-    const { 
-      email, 
-      password, 
-      companyName, 
-      industry, 
-      companyBio, 
-      website, 
+    const {
+      email,
+      password,
+      companyName,
+      industry,
+      companyBio,
+      website,
       location,
-      acceptTerms
+      acceptTerms,
+      user_type
     } = req.body;
 
     // Validation
     if (!email || !password || !companyName) {
-      return res.status(400).json({ 
-        error: 'Email, password, and company name are required' 
+      return res.status(400).json({
+        error: 'Email, password, and company name are required'
+      });
+    }
+
+    if (password.length < 8) {
+      return res.status(400).json({
+        error: 'Password must be at least 8 characters long'
       });
     }
 
     if (!acceptTerms) {
-      return res.status(400).json({ 
-        error: 'You must accept the terms and conditions' 
+      return res.status(400).json({
+        error: 'You must accept the terms and conditions'
       });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const conn = await pool.getConnection();
-    
+
     try {
       // Insert into users table
       const userQuery = `
-        INSERT INTO users (name, email, password, created_at, updated_at) 
+        INSERT INTO users (name, email, password, created_at, updated_at)
         VALUES (?, ?, ?, NOW(), NOW())
       `;
       
@@ -75,15 +82,15 @@ app.post('/api/register', async (req, res) => {
         email,
         hashedPassword
       ]);
-      
+
       const userId = userResult.insertId;
 
-      // Create or use businesses table
+      // Insert into businesses table
       const businessQuery = `
-        INSERT INTO businesses (user_id, company_name, email, industry, description, website, location, accepts_terms, created_at, updated_at) 
+        INSERT INTO businesses (user_id, company_name, email, industry, description, website, location, accepts_terms, created_at, updated_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
       `;
-      
+
       await conn.query(businessQuery, [
         userId,
         companyName,
@@ -95,194 +102,150 @@ app.post('/api/register', async (req, res) => {
         acceptTerms ? 1 : 0
       ]);
 
+      // Generate JWT token
       const token = jwt.sign(
-        { id: userId, email, type: 'business', name: companyName },
+        { id: userId, email: email, type: 'business', name: companyName },
         process.env.JWT_SECRET || 'secret',
         { expiresIn: '24h' }
       );
 
       res.status(201).json({
         message: 'Business registered successfully',
-        token,
-        user: { id: userId, email, type: 'business', name: companyName }
-      });
-
-    } finally {
-      conn.release();
-    }
-  } catch (error) {
-    console.error('Registration error:', error);
-    // Check if it's a duplicate email error
-    if (error.code === 'ER_DUP_ENTRY') {
-      res.status(400).json({ error: 'Email already registered' });
-    } else {
-      res.status(500).json({ error: error.message });
-    }
-  }
-});
-
-// =============================================
-// LOGIN ENDPOINT
-// =============================================
-app.post('/api/login', async (req, res) => {
-  try {
-    const { email, password, type } = req.body;
-
-    if (!email || !password || !type) {
-      return res.status(400).json({ 
-        error: 'Email, password, and type are required' 
-      });
-    }
-
-    const conn = await pool.getConnection();
-    
-    try {
-      const query = `SELECT * FROM users WHERE email = ?`;
-      const [results] = await conn.query(query, [email]);
-
-      if (results.length === 0) {
-        return res.status(401).json({ error: 'Invalid email or password' });
-      }
-
-      const user = results[0];
-      const isPasswordValid = await bcrypt.compare(password, user.password);
-
-      if (!isPasswordValid) {
-        return res.status(401).json({ error: 'Invalid email or password' });
-      }
-
-      const token = jwt.sign(
-        {
-          id: user.id,
-          email: user.email,
-          type,
-          name: user.name
-        },
-        process.env.JWT_SECRET || 'secret',
-        { expiresIn: '24h' }
-      );
-
-      res.status(200).json({
-        message: 'Login successful',
-        token,
+        token: token,
         user: {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          type
+          id: userId,
+          email: email,
+          companyName: companyName,
+          type: 'business'
         }
       });
+
     } finally {
       conn.release();
     }
+
   } catch (error) {
-    console.error('Login error:', error);
-    res.status(500).json({ error: error.message });
+    console.error('Business registration error:', error);
+    res.status(500).json({
+      message: 'Registration error',
+      error: error.message
+    });
   }
 });
 
-// =============================================
+// ================================================
 // INFLUENCER REGISTRATION
-// =============================================
+// ================================================
 app.post('/api/influencer/register', async (req, res) => {
   try {
-    const { 
-      email, 
-      password, 
-      name,
-      bio, 
-      niche, 
-      platforms, 
-      followers, 
+    const {
+      email,
+      password,
+      fullName,
+      bio,
+      mainNiche,
+      activePlatforms,
+      followersCount,
       location,
-      instagram_handle,
-      termsAccepted
+      instagramHandle,
+      acceptTerms
     } = req.body;
 
     // Validation
-    if (!email || !password || !name) {
-      return res.status(400).json({ 
-        error: 'Email, password, and name are required' 
+    if (!email || !password || !fullName) {
+      return res.status(400).json({
+        error: 'Email, password, and full name are required'
       });
     }
-    
-    if (!termsAccepted) {
-      return res.status(400).json({ 
-        error: 'You must accept the terms and conditions' 
+
+    if (!acceptTerms) {
+      return res.status(400).json({
+        error: 'You must accept the terms and conditions'
       });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const conn = await pool.getConnection();
-    
+
     try {
       // Insert into users table
       const userQuery = `
-        INSERT INTO users (name, email, password, created_at, updated_at) 
+        INSERT INTO users (name, email, password, created_at, updated_at)
         VALUES (?, ?, ?, NOW(), NOW())
       `;
       
       const [userResult] = await conn.query(userQuery, [
-        name,
+        fullName,
         email,
         hashedPassword
       ]);
-      
+
       const userId = userResult.insertId;
-      
+
       // Insert into influencers table
       const influencerQuery = `
-        INSERT INTO influencers (user_id, bio, niche, platforms, followers, location, instagram_handle, accepts_terms, created_at, updated_at) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+        INSERT INTO influencers (user_id, full_name, email, bio, main_niche, active_platforms, followers_count, location, instagram_handle, accepts_terms, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
       `;
-      
+
       await conn.query(influencerQuery, [
         userId,
+        fullName,
+        email,
         bio || null,
-        niche || null,
-        platforms || null,
-        followers || 0,
+        mainNiche || null,
+        activePlatforms || null,
+        followersCount || 0,
         location || null,
-        instagram_handle || null,
-        termsAccepted ? 1 : 0
+        instagramHandle || null,
+        acceptTerms ? 1 : 0
       ]);
-      
+
+      // Generate JWT token
       const token = jwt.sign(
-        { id: userId, email, type: 'influencer', name },
+        { id: userId, email: email, type: 'influencer', name: fullName },
         process.env.JWT_SECRET || 'secret',
         { expiresIn: '24h' }
       );
-      
+
       res.status(201).json({
         message: 'Influencer registered successfully',
-        token,
-        user: { id: userId, email, type: 'influencer', name }
+        token: token,
+        user: {
+          id: userId,
+          email: email,
+          fullName: fullName,
+          type: 'influencer'
+        }
       });
+
     } finally {
       conn.release();
     }
+
   } catch (error) {
     console.error('Influencer registration error:', error);
-    if (error.code === 'ER_DUP_ENTRY') {
-      res.status(400).json({ error: 'Email already registered' });
-    } else {
-      res.status(500).json({ error: error.message });
-    }
+    res.status(500).json({
+      message: 'Registration error',
+      error: error.message
+    });
   }
 });
 
-// =============================================
-// TEST ENDPOINT
-// =============================================
-app.get('/api/test', (req, res) => {
-  res.json({ message: 'API is working', timestamp: new Date() });
+// ================================================
+// HEALTH CHECK
+// ================================================
+app.get('/api/health', (req, res) => {
+  res.status(200).json({ status: 'OK', message: 'Server is running' });
 });
 
-// =============================================
+// ================================================
 // START SERVER
-// =============================================
+// ================================================
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
-  console.log(`API: http://localhost:${PORT}/api/test`);
+  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
 });
+
+module.exports = app;
