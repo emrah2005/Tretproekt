@@ -3,6 +3,7 @@ import laravel from 'laravel-vite-plugin';
 import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
+    root: 'frontend',
     plugins: [
         laravel({
 input: ['frontend/**/*.html', 'frontend/js/app.js'],            refresh: true,
