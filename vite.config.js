@@ -1,13 +1,13 @@
 import { defineConfig } from 'vite';
+import laravel from 'laravel-vite-plugin';
+import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
-  root: './frontend',
-  server: {
-    port: 5173,
-    host: true
-  },
-  build: {
-    outDir: '../backend/public/dist',
-    emptyOutDir: true
-  }
+    plugins: [
+        laravel({
+            input: ['resources/css/app.css', 'resources/js/app.js'],
+            refresh: true,
+        }),
+        tailwindcss(),
+    ],
 });

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Laravel\Sanctum\HasApiTokens;
@@ -9,10 +10,24 @@ use Illuminate\Notifications\Notifiable;
 
 class User extends Authenticatable
 {
-    use HasApiTokens, HasFactory, Notifiable;
+    /** @use HasFactory<\Database\Factories\UserFactory> */
+    use HasFactory, Notifiable;
 
+    /**
+     * The attributes that are mass assignable.
+     *
+     * @var list<string>
+     */
     protected $fillable = [
-        'name', 'email', 'password', 'role', 'profile_picture', 'bio', 'country', 'kyc_verified', 'is_approved'
+        'name',
+        'email',
+        'password',
+        'role',
+        'profile_picture',
+        'bio',
+        'country',
+        'kyc_verified',
+        'is_approved',
     ];
 
     protected $hidden = [
@@ -25,7 +40,14 @@ class User extends Authenticatable
         'is_approved' => 'boolean',
     ];
 
-    public function isBrand() { return $this->role === 'brand'; }
-    public function isInfluencer() { return $this->role === 'influencer'; }
+    public function isBrand()
+    {
+        return $this->role === 'brand';
+    }
+
+    public function isInfluencer()
+    {
+        return $this->role === 'influencer';
+    }
 }
 
