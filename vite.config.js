@@ -6,7 +6,7 @@ export default defineConfig({
     root: 'frontend',
     plugins: [
         laravel({
-input: ['frontend/**/*.html', 'frontend/js/app.js'],            refresh: true,
+input: ['**/*.html', 'js/app.js'],
         }),
         tailwindcss(),
     ],
