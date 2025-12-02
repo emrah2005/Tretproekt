@@ -4,28 +4,19 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
-use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use Illuminate\Notifications\Notifiable;
 
 class User extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable;
 
     protected $fillable = [
-        'name',
-        'email',
-        'password',
-        'role',
-        'profile_picture',
-        'bio',
-        'country',
-        'kyc_verified',
-        'is_approved',
+        'name', 'email', 'password', 'role', 'profile_picture', 'bio', 'country', 'kyc_verified', 'is_approved'
     ];
 
     protected $hidden = [
-        'password',
-        'remember_token',
+        'password', 'remember_token',
     ];
 
     protected $casts = [
@@ -34,13 +25,7 @@ class User extends Authenticatable
         'is_approved' => 'boolean',
     ];
 
-    public function isBrand()
-    {
-        return $this->role === 'brand';
-    }
-
-    public function isInfluencer()
-    {
-        return $this->role === 'influencer';
-    }
+    public function isBrand() { return $this->role === 'brand'; }
+    public function isInfluencer() { return $this->role === 'influencer'; }
 }
+
