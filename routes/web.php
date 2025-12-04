@@ -7,5 +7,5 @@ Route::get('/', function () {
 });
 
 Route::get('/public', function () {
-    return view('welcome');
+    return view('app'); // Change 'app' to your main SPA blade if different
 });
